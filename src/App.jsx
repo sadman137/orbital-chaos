@@ -54,37 +54,61 @@ export default function App() {
       });
     };
 
+    const drawGrid = () => {
+      ctx.strokeStyle = '#00ff6615';
+      ctx.lineWidth = 1;
+
+      // Radar Concentric Circles
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      for (let r = 100; r < 500; r += 100) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Crosshairs
+      ctx.beginPath();
+      ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height);
+      ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
+      ctx.strokeStyle = '#00ff6625';
+      ctx.stroke();
+    };
+
     const render = () => {
       // Background & trails
-      ctx.fillStyle = 'rgba(10, 10, 15, 0.25)';
+      ctx.fillStyle = 'rgba(5, 5, 12, 0.2)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
 
       // Render celestial bodies
       bodies.forEach((body) => {
+        ctx.save();
         ctx.beginPath();
         ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
         ctx.fillStyle = body.color;
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 15;
         ctx.shadowColor = body.color;
         ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.restore();
       });
 
       // Render trajectory vector preview line
       if (dragStart && dragCurrent) {
+        ctx.save();
         ctx.beginPath();
         ctx.moveTo(dragStart.x, dragStart.y);
         ctx.lineTo(dragCurrent.x, dragCurrent.y);
-        ctx.strokeStyle = '#ff3366';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = '#00ff66';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
         ctx.stroke();
-        ctx.setLineDash([]);
 
         ctx.beginPath();
-        ctx.arc(dragStart.x, dragStart.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#ff3366';
-        ctx.fill();
+        ctx.arc(dragStart.x, dragStart.y, 8, 0, Math.PI * 2);
+        ctx.strokeStyle = '#00ff66';
+        ctx.stroke();
+        ctx.restore();
       }
 
       updatePhysics();
@@ -140,18 +164,52 @@ export default function App() {
   };
 
   return (
-    <div style={{ background: '#0a0a0f', width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', userSelect: 'none' }}>
-      <h1 style={{ marginBottom: '8px', fontSize: '1.8rem' }}>Orbital Chaos</h1>
-      <p style={{ color: '#888', marginBottom: '16px' }}>Click and drag on the canvas to launch new planets!</p>
-      <canvas
-        ref={canvasRef}
-        width={900}
-        height={650}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        style={{ border: '1px solid #2a2a3c', borderRadius: '12px', background: '#000', cursor: 'crosshair' }}
-      />
+    <div style={{ background: '#020204', width: '100vw', height: '100vh', display: 'flex', color: '#00ff66', fontFamily: 'monospace', userSelect: 'none', overflow: 'hidden' }}>
+
+      <div style={{ width: '280px', borderRight: '1px solid #00ff6633', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', background: '#05070a' }}>
+        <div>
+          <h1 style={{ fontSize: '1.2rem', margin: 0, color: '#00ff66', letterSpacing: '2px', fontWeight: 'bold' }}>
+            [ORBITAL_CHAOS]
+          </h1>
+          <p style={{ fontSize: '0.7rem', color: '#00ff66aa', margin: '4px 0 0 0' }}>
+            SYS.VER // 0.2.1
+          </p>
+        </div>
+
+        <div style={{ borderTop: '1px dashed #00ff6633', borderBottom: '1px dashed #00ff6633', padding: '12px 0', fontSize: '0.75rem', lineHeight: '1.6' }}>
+          <div>&gt; RADAR_STATUS: ONLINE</div>
+          <div>&gt; ACTIVE_BODIES: <span style={{ color: '#fff', fontWeight: 'bold' }}>{bodies.length}</span></div>
+          <div>&gt; MOUSE_INPUT: VECTOR_LAUNCH</div>
+        </div>
+
+        <div style={{ fontSize: '0.7rem', color: '#00ff6688', lineHeight: '1.5' }}>
+          INSTRUCTIONS:<br />
+          1. CLICK + DRAG ON GRID<br />
+          2. RELEASE TO LAUNCH<br />
+          3. OBSERVE TRAJECTORY
+        </div>
+      </div>
+
+      {/* Main Radar Display Viewport */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#020204', position: 'relative' }}>
+
+        {/* Top Telemetry Header */}
+        <div style={{ position: 'absolute', top: '16px', left: '20px', right: '20px', display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#00ff6677' }}>
+          <span>GRID: 30X30_UNITS</span>
+          <span>SECTOR: OORT_CLOUD</span>
+        </div>
+
+        {/* Canvas Viewport */}
+        <canvas
+          ref={canvasRef}
+          width={850}
+          height={580}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          style={{ border: '1px solid #00ff6644', background: '#000000', cursor: 'crosshair', boxShadow: '0 0 30px rgba(0, 255, 102, 0.05)' }}
+        />
+      </div>
     </div>
   );
 }

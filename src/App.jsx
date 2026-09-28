@@ -1,7 +1,14 @@
 import React, { useRef, useEffect, useState } from 'react';
 
+const OBJECT_TYPES = {
+  PLANET: { name: 'PLANET', mass: 15, radius: 6, color: '#00ffcc' },
+  STAR: { name: 'STAR', mass: 1000, radius: 14, color: '#ffcc00' },
+  BLACK_HOLE: { name: 'BLACK HOLE', mass: 5000, radius: 10, color: '#ff0055' }
+};
+
 export default function App() {
   const canvasRef = useRef(null);
+  const [selectedType, setSelectedType] = useState('PLANET');
 
   // Simulation bodies
   const [bodies, setBodies] = useState([
@@ -90,6 +97,18 @@ export default function App() {
         ctx.shadowBlur = 15;
         ctx.shadowColor = body.color;
         ctx.fill();
+        
+
+        if (body.mass >= 5000) {
+          ctx.beginPath();
+          ctx.arc(body.x, body.y, body.radius + 5, 0, Math.PI * 2);
+          ctx.strokeStyle = '#ff0055';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
         ctx.restore();
       });
 
@@ -145,17 +164,16 @@ export default function App() {
     const vx = (dragCurrent.x - dragStart.x) * 0.05;
     const vy = (dragCurrent.y - dragStart.y) * 0.05;
 
-    const colors = ['#00ffcc', '#ff007f', '#a855f7', '#3b82f6', '#f97316'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const preset = OBJECT_TYPES[selectedType];
 
     const newBody = {
       x: dragStart.x,
       y: dragStart.y,
       vx,
       vy,
-      mass: 15,
-      radius: 6,
-      color: randomColor
+      mass: preset.mass,
+      radius: preset.radius,
+      color: preset.color
     };
 
     setBodies((prev) => [...prev, newBody]);
@@ -163,10 +181,18 @@ export default function App() {
     setDragCurrent(null);
   };
 
-  return (
-    <div style={{ background: '#020204', width: '100vw', height: '100vh', display: 'flex', color: '#00ff66', fontFamily: 'monospace', userSelect: 'none', overflow: 'hidden' }}>
+  const handleReset = () => {
+    setBodies([
+      { x: 450, y: 325, vx: 0, vy: 0, mass: 1000, radius: 14, color: '#ffcc00' },
+      { x: 450, y: 175, vx: 2.2, vy: 0, mass: 10, radius: 6, color: '#00ffcc' }
+    ]);
+  };
 
-      <div style={{ width: '280px', borderRight: '1px solid #00ff6633', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', background: '#05070a' }}>
+  return (
+    <div style={{ background: '#020204', width: '100vw', minHeight: '100vh', display: 'flex', color: '#00ff66', fontFamily: 'monospace', userSelect: 'none', overflow: 'hidden' }}>
+
+      {/* Left Telemetry Sidebar */}
+      <div style={{ width: '280px', borderRight: '1px solid #00ff6633', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', background: '#05070a', boxSizing: 'border-box' }}>
         <div>
           <h1 style={{ fontSize: '1.2rem', margin: 0, color: '#00ff66', letterSpacing: '2px', fontWeight: 'bold' }}>
             [ORBITAL_CHAOS]
@@ -188,13 +214,55 @@ export default function App() {
           2. RELEASE TO LAUNCH<br />
           3. OBSERVE TRAJECTORY
         </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '0.7rem', color: '#00ff66aa' }}>&gt; SELECT_PAYLOAD:</div>
+          {Object.keys(OBJECT_TYPES).map((type) => (
+            <button 
+              key={type}
+              onClick={() => setSelectedType(type)}
+              style={{
+                background: selectedType === type ? OBJECT_TYPES[type].color : 'transparent',
+                color: selectedType === type ? '#000' : OBJECT_TYPES[type].color,
+                border: `1px solid ${OBJECT_TYPES[type].color}`,
+                padding: '8px 12px',
+                fontFamily: 'monospace',
+                fontSize: '0.75rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              [{OBJECT_TYPES[type].name}] M:{OBJECT_TYPES[type].mass}
+            </button> 
+          ))}
+
+          <button
+            onClick={handleReset}
+            style={{
+              background: 'transparent',
+              color: '#ff0055',
+              border: '1px solid #ff0055',
+              padding: '8px 12px',
+              fontFamily: 'monospace',
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              textAlign: 'left',
+              marginTop: '12px'
+            }}
+          >
+            [PURGE_SYSTEM_RESET]
+          </button>
+        </div>
       </div>
 
       {/* Main Radar Display Viewport */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#020204', position: 'relative' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#020204', position: 'relative', height: '100vh', boxSizing: 'border-box' }}>
 
         {/* Top Telemetry Header */}
-        <div style={{ position: 'absolute', top: '16px', left: '20px', right: '20px', display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#00ff6677' }}>
+        <div style={{ position: 'absolute', top: '16px', left: '24px', right: '24px', display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#00ff6677' }}>
           <span>GRID: 30X30_UNITS</span>
           <span>SECTOR: OORT_CLOUD</span>
         </div>
@@ -202,8 +270,8 @@ export default function App() {
         {/* Canvas Viewport */}
         <canvas
           ref={canvasRef}
-          width={850}
-          height={580}
+          width={800}
+          height={540}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}

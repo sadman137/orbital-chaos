@@ -53,6 +53,11 @@ export default function App() {
         }
 
         for (let body of nextBodies) {
+          body.trail = [...(body.trail || []), { x: body.x, y: body.y}];
+          if (body.trail.length > 30) {
+            body.trail.shift();
+          }
+
           body.x += body.vx;
           body.y += body.vy;
         }

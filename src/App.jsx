@@ -12,8 +12,8 @@ export default function App() {
 
   // Simulation bodies
   const [bodies, setBodies] = useState([
-    { x: 450, y: 325, vx: 0, vy: 0, mass: 1000, radius: 14, color: '#ffcc00'},
-    { x: 450, y: 175, vx: 2.2, vy: 0, mass: 10, radius: 6, color: '#00ccff'}
+    { x: 450, y: 325, vx: 0, vy: 0, mass: 1000, radius: 14, color: '#ffcc00', trail: [] },
+    { x: 450, y: 175, vx: 2.2, vy: 0, mass: 10, radius: 6, color: '#00ccff', trail: [] }
   ]);
 
   // Mouse launcher state
@@ -173,7 +173,8 @@ export default function App() {
       vy,
       mass: preset.mass,
       radius: preset.radius,
-      color: preset.color
+      color: preset.color,
+      trail: []
     };
 
     setBodies((prev) => [...prev, newBody]);
@@ -183,8 +184,8 @@ export default function App() {
 
   const handleReset = () => {
     setBodies([
-      { x: 450, y: 325, vx: 0, vy: 0, mass: 1000, radius: 14, color: '#ffcc00' },
-      { x: 450, y: 175, vx: 2.2, vy: 0, mass: 10, radius: 6, color: '#00ffcc' }
+      { x: 450, y: 325, vx: 0, vy: 0, mass: 1000, radius: 14, color: '#ffcc00', trail: [] },
+      { x: 450, y: 175, vx: 2.2, vy: 0, mass: 10, radius: 6, color: '#00ffcc', trail: [] }
     ]);
   };
 

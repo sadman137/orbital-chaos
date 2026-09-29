@@ -9,6 +9,7 @@ const OBJECT_TYPES = {
 export default function App() {
   const canvasRef = useRef(null);
   const [selectedType, setSelectedType] = useState('PLANET');
+  const [showTrails, setShowTrails] = useState(true);
 
   // Simulation bodies
   const [bodies, setBodies] = useState([
@@ -94,7 +95,8 @@ export default function App() {
       drawGrid();
 
       // Trail Rendering
-      bodies.forEach((body) => {
+      if (showTrails) {
+        bodies.forEach((body) => {
         if (!body.trail || body.trail.length < 2) return;
 
         ctx.save();
@@ -112,9 +114,10 @@ export default function App() {
           ctx.globalAlpha = alpha;
           ctx.lineWidth = 1.5;
           ctx.stroke();
-        }
-        ctx.restore();
-      });
+          }
+          ctx.restore();
+        });
+      }
 
       // Render celestial bodies
       bodies.forEach((body) => {
@@ -165,7 +168,7 @@ export default function App() {
     render();
 
     return () => cancelAnimationFrame(animationFrameId);
-  }, [bodies, dragStart, dragCurrent]);
+  }, [bodies, dragStart, dragCurrent, showTrails]);
 
   const getCanvasCoords = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
@@ -266,6 +269,24 @@ export default function App() {
               [{OBJECT_TYPES[type].name}] M:{OBJECT_TYPES[type].mass}
             </button> 
           ))}
+
+          <button
+            onClick={handleReset}
+            style={{
+              background: 'transparent',
+              color: showTrails ? '#00ff66' : '#666',
+              border: `1px solid ${showTrails ? '#00ff66' : '#666'}`,
+              padding: '8px 12px',
+              fontFamily: 'monospace',
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              textAlign: 'left',
+              marginTop: '8px'
+            }}
+          >
+            [TRAILS: {showTrails ? 'ENABLED' : 'DISABLED'}]
+          </button>
 
           <button
             onClick={handleReset}

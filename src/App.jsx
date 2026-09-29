@@ -81,7 +81,50 @@ export default function App() {
           nextBodies[i].vy += fy / nextBodies[i].mass;
         }
 
-        for (let body of nextBodies) {
+        // Collision Detection & Momentum Transfer
+        const activeBodies = [...nextBodies];
+        const survivingBodies = [];
+        const mergedIndices = new Set();
+
+        for (let i = 0; i < activeBodies.length; i++) {
+          if (mergedIndices.has(i)) continue;
+
+          let current = activeBodies[i];
+
+          for (let j = i + 1; j < activeBodies.length; j++) {
+            if (mergedIndices.has(j)) continue;
+
+            const other = activeBodies[j];
+            const dx = other.x - current.x;
+            const dy = other.y - current.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Collision condition: Distance < sum of radii
+            if (dist < current.radius + other.radius) {
+              mergedIndices.add(j);
+              
+              const totalMass = current.mass + other.mass;
+
+              // Inelastic collision momentuum observation
+              const newVx = (current.vx * current.mass + other.vx * other.mass) / totalMass;
+              const newVy = (current.vy * current.mass + other.vy * other.mass) / totalMass;
+
+              // Merge into the dominant body
+              current = {
+                ...current,
+                vx: newVx,
+                vy: newVy,
+                mass: totalMass,
+                radius: Math.min(25, current.radius + other.radius * 0.3),
+                color: current.mass >= other.mass ? current.color : other.color
+              };
+            }
+          }
+
+          survivingBodies.push(current);
+        }
+
+        for (let body of survivingBodies) {
           body.trail = [...(body.trail || []), { x: body.x, y: body.y}];
           if (body.trail.length > 30) {
             body.trail.shift();
@@ -91,7 +134,7 @@ export default function App() {
           body.y += body.vy;
         }
 
-        return nextBodies;
+        return survivingBodies;
       });
     };
 

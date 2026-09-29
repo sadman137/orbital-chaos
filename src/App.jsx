@@ -10,6 +10,24 @@ export default function App() {
   const canvasRef = useRef(null);
   const [selectedType, setSelectedType] = useState('PLANET');
   const [showTrails, setShowTrails] = useState(true);
+  const particlesRef = useRef([]);
+  const [fps, setFps] = useState(60);
+
+  const triggerExplosion = (x, y, color) => {
+    const pCount = 12;
+    for (let i = 0; i < pCount; i++) {
+      const angle = (Math.PI * 2 * i) / pCount;
+      const speed = 1.5 + Math.random() * 2.5;
+      particlesRef.current.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1.0,
+        color
+      });
+    }
+  };
 
   // Web Audio Synth setup
   const audioCtxRef = useRef(null);
@@ -24,19 +42,44 @@ export default function App() {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    // Frequency mapping based on mass
     const baseFreq = type === 'BLACK_HOLE' ? 80 : type === 'STAR' ? 150 : 400;
     osc.type = type === 'BLACK_HOLE' ? 'sawtooth' : 'sine';
 
-    osc.frequency.setValuteAtTime(baseFreq, ctx.currentTime);
-    osc.frequency.exponentialRamptoValueAtTime(baseFreq * 2.5, ctx.currentTime + 0.15);
+    osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.5, ctx.currentTime + 0.15);
 
-
-    gain.gain.setValuteAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRamptoValueAtTime(0.001, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
 
     osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
     osc.stop(ctx.currentTime + 0.2);
+  };
+
+  const playImpactSound = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = audioCtxRef.current;
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(160, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.25);
+
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
   };
 
   // Simulation bodies
@@ -54,7 +97,7 @@ export default function App() {
     const ctx = canvas.getContext('2d');
     let animationFrameId;
   
-    const G = 0.5; // Gravtiational constant
+    const G = 0.5; // Gravitational constant
 
     const updatePhysics = () => {
       setBodies((prevBodies) => {
@@ -69,7 +112,7 @@ export default function App() {
 
             const dx = nextBodies[j].x - nextBodies[i].x;
             const dy = nextBodies[j].y - nextBodies[i].y;
-            const distSq = dx * dx + dy * dy + 100; // Softening factor to prevent infinity
+            const distSq = dx * dx + dy * dy + 100;
             const dist = Math.sqrt(distSq);
 
             const force = (G * nextBodies[i].mass * nextBodies[j].mass) / distSq;
@@ -99,17 +142,16 @@ export default function App() {
             const dy = other.y - current.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // Collision condition: Distance < sum of radii
             if (dist < current.radius + other.radius) {
               mergedIndices.add(j);
+              playImpactSound();
+              triggerExplosion(current.x, current.y, current.color);
               
               const totalMass = current.mass + other.mass;
 
-              // Inelastic collision momentuum observation
               const newVx = (current.vx * current.mass + other.vx * other.mass) / totalMass;
               const newVy = (current.vy * current.mass + other.vy * other.mass) / totalMass;
 
-              // Merge into the dominant body
               current = {
                 ...current,
                 vx: newVx,
@@ -125,7 +167,7 @@ export default function App() {
         }
 
         for (let body of survivingBodies) {
-          body.trail = [...(body.trail || []), { x: body.x, y: body.y}];
+          body.trail = [...(body.trail || []), { x: body.x, y: body.y }];
           if (body.trail.length > 30) {
             body.trail.shift();
           }
@@ -142,7 +184,6 @@ export default function App() {
       ctx.strokeStyle = '#00ff6615';
       ctx.lineWidth = 1;
 
-      // Radar Concentric Circles
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
       for (let r = 100; r < 500; r += 100) {
@@ -151,7 +192,6 @@ export default function App() {
         ctx.stroke();
       }
 
-      // Crosshairs
       ctx.beginPath();
       ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height);
       ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
@@ -159,32 +199,62 @@ export default function App() {
       ctx.stroke();
     };
 
+    // FPS Counter Tracker & Particle Render Loop
+    let lastTime = performance.now();
+    let frameCount = 0;
+
     const render = () => {
-      // Background & trails
+      // Live FPS Tracker
+      const now = performance.now();
+      frameCount++;
+      if (now - lastTime >= 1000) {
+        setFps(frameCount);
+        frameCount = 0;
+        lastTime = now;
+      }
+
+      // Background & Grid
       ctx.fillStyle = 'rgba(5, 5, 12, 0.2)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       drawGrid();
 
+      // Particle Explosions Animation Update & Render
+      particlesRef.current.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.03;
+
+        if (p.life > 0) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.life;
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+      particlesRef.current = particlesRef.current.filter((p) => p.life > 0);
+
       // Trail Rendering
       if (showTrails) {
         bodies.forEach((body) => {
-        if (!body.trail || body.trail.length < 2) return;
+          if (!body.trail || body.trail.length < 2) return;
 
-        ctx.save();
-        for (let i = 0; i < body.trail.length - 1; i++) {
-          const p1 = body.trail[i];
-          const p2 = body.trail[i + 1];
+          ctx.save();
+          for (let i = 0; i < body.trail.length - 1; i++) {
+            const p1 = body.trail[i];
+            const p2 = body.trail[i + 1];
 
-          // Fading opacity
-          const alpha = (i / body.trail.length) * 0.6;
+            const alpha = (i / body.trail.length) * 0.6;
 
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.strokeStyle = body.color;
-          ctx.globalAlpha = alpha;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = body.color;
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
           }
           ctx.restore();
         });
@@ -199,7 +269,6 @@ export default function App() {
         ctx.shadowBlur = 15;
         ctx.shadowColor = body.color;
         ctx.fill();
-        
 
         if (body.mass >= 5000) {
           ctx.beginPath();
@@ -344,7 +413,7 @@ export default function App() {
           ))}
 
           <button
-            onClick={handleReset}
+            onClick={() => setShowTrails((prev) => !prev)}
             style={{
               background: 'transparent',
               color: showTrails ? '#00ff66' : '#666',
@@ -387,6 +456,7 @@ export default function App() {
         {/* Top Telemetry Header */}
         <div style={{ position: 'absolute', top: '16px', left: '24px', right: '24px', display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#00ff6677' }}>
           <span>GRID: 30X30_UNITS</span>
+          <span>FPS: <span style={{ color: fps < 45 ? '#ff0055' : '#00ff66', fontWeight: 'bold' }}>{fps}</span></span>
           <span>SECTOR: OORT_CLOUD</span>
         </div>
 

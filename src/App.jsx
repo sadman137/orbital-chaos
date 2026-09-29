@@ -93,6 +93,29 @@ export default function App() {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       drawGrid();
 
+      // Trail Rendering
+      bodies.forEach((body) => {
+        if (!body.trail || body.trail.length < 2) return;
+
+        ctx.save();
+        for (let i = 0; i < body.trail.length - 1; i++) {
+          const p1 = body.trail[i];
+          const p2 = body.trail[i + 1];
+
+          // Fading opacity
+          const alpha = (i / body.trail.length) * 0.6;
+
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = body.color;
+          ctx.globalAlpha = alpha;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+
       // Render celestial bodies
       bodies.forEach((body) => {
         ctx.save();

@@ -11,6 +11,34 @@ export default function App() {
   const [selectedType, setSelectedType] = useState('PLANET');
   const [showTrails, setShowTrails] = useState(true);
 
+  // Web Audio Synth setup
+  const audioCtxRef = useRef(null);
+
+  const playLaunchSound = (type) => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = audioCtxRef.current;
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    // Frequency mapping based on mass
+    const baseFreq = type === 'BLACK_HOLE' ? 80 : type === 'STAR' ? 150 : 400;
+    osc.type = type === 'BLACK_HOLE' ? 'sawtooth' : 'sine';
+
+    osc.frequency.setValuteAtTime(baseFreq, ctx.currentTime);
+    osc.frequency.exponentialRamptoValueAtTime(baseFreq * 2.5, ctx.currentTime + 0.15);
+
+
+    gain.gain.setValuteAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRamptoValueAtTime(0.001, ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    osc.stop(ctx.currentTime + 0.2);
+  };
+
   // Simulation bodies
   const [bodies, setBodies] = useState([
     { x: 450, y: 325, vx: 0, vy: 0, mass: 1000, radius: 14, color: '#ffcc00', trail: [] },
@@ -207,6 +235,8 @@ export default function App() {
       color: preset.color,
       trail: []
     };
+
+    playLaunchSound(selectedType);
 
     setBodies((prev) => [...prev, newBody]);
     setDragStart(null);
